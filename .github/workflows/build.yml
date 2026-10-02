@@ -3,8 +3,7 @@ name: Build APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: ["main"]
 
 jobs:
   build:
@@ -27,20 +26,18 @@ jobs:
 
       - name: Extract Android project
         run: |
-          mkdir -p project
+          rm -rf project
+          mkdir project
           unzip -o BilliardSnake-Android.zip -d project
 
-      - name: Fix Java and Kotlin JVM targets
+      - name: Fix JVM targets
         working-directory: project
         run: |
-          find . -name "build.gradle" -type f -exec sed -i '/android {/a\
-              compileOptions {\
-                  sourceCompatibility JavaVersion.VERSION_17\
-                  targetCompatibility JavaVersion.VERSION_17\
-              }\
-              kotlinOptions {\
-                  jvmTarget = "17"\
-              }' {} \;
+          find . -type f \( -name "*.gradle" -o -name "*.gradle.kts" \) -print0 | xargs -0 sed -i \
+            -e 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' \
+            -e 's/JavaVersion.VERSION_8/JavaVersion.VERSION_17/g' \
+            -e "s/jvmTarget *= *['\"]1.8['\"]/jvmTarget = '17'/g" \
+            -e "s/jvmTarget *= *['\"]8['\"]/jvmTarget = '17'/g'
 
       - name: Build APK
         working-directory: project
