@@ -26,21 +26,50 @@ jobs:
 
       - name: Extract Android project
         run: |
+          rm -rf project
+          mkdir project
           unzip -o BilliardSnake-Android.zip -d project
 
-      -       - name: Fix JVM target compatibility
+      - name: Find Android project
+        working-directory: project
+        run: |
+          echo "Project files:"
+          find . -maxdepth 4 -type f \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" \) -print
+
+      - name: Fix JVM target
         working-directory: project
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          p = Path("app/build.gradle")
-          if p.exists():
+          files = list(Path(".").rglob("build.gradle")) + list(Path(".").rglob("build.gradle.kts"))
+
+          if not files:
+              print("ERROR: No Gradle build files found")
+              raise SystemExit(1)
+
+          print("Gradle files found:")
+          for f in files:
+              print(" -", f)
+
+          for p in files:
               s = p.read_text()
 
-              if "compileOptions" not in s:
-                  s += """
-          
+              # Java 17
+              if "compileOptions" not in s and "com.android.application" in s:
+                  if p.suffix == ".kts":
+                      s += """
+
+          android {
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+          }
+          """
+                  else:
+                      s += """
+
           android {
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -49,9 +78,20 @@ jobs:
           }
           """
 
-              if "kotlinOptions" not in s:
-                  s += """
-          
+              # Kotlin JVM 17
+              if "kotlinOptions" not in s and "com.android.application" in s:
+                  if p.suffix == ".kts":
+                      s += """
+
+          android {
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          """
+                  else:
+                      s += """
+
           android {
               kotlinOptions {
                   jvmTarget = '17'
@@ -60,18 +100,23 @@ jobs:
           """
 
               p.write_text(s)
-              print("JVM settings added to app/build.gradle")
-          else:
-              print("app/build.gradle not found")
-              raise SystemExit(1)
+
+          print("JVM target configuration completed.")
           PY
 
-      - name: Build APK
+      - name: Find Gradle wrapper or use Gradle
         working-directory: project
-        run: gradle assembleDebug
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: BilliardSnake-APK
-          path: project/app/build/outputs/apk/debug/app-debug.apk
+          path: project/**/build/outputs/apk/debug/*.apk
+```
