@@ -28,6 +28,44 @@ jobs:
         run: |
           unzip -o BilliardSnake-Android.zip -d project
 
+      -       - name: Fix JVM target compatibility
+        working-directory: project
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("app/build.gradle")
+          if p.exists():
+              s = p.read_text()
+
+              if "compileOptions" not in s:
+                  s += """
+          
+          android {
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          """
+
+              if "kotlinOptions" not in s:
+                  s += """
+          
+          android {
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+          }
+          """
+
+              p.write_text(s)
+              print("JVM settings added to app/build.gradle")
+          else:
+              print("app/build.gradle not found")
+              raise SystemExit(1)
+          PY
+
       - name: Build APK
         working-directory: project
         run: gradle assembleDebug
