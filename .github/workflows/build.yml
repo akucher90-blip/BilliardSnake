@@ -3,7 +3,8 @@ name: Build APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build:
@@ -26,93 +27,24 @@ jobs:
 
       - name: Extract Android project
         run: |
-          rm -rf project
-          mkdir project
+          mkdir -p project
           unzip -o BilliardSnake-Android.zip -d project
 
-      - name: Find Android project
+      - name: Fix Java and Kotlin JVM targets
         working-directory: project
         run: |
-          echo "Project files:"
-          find . -maxdepth 4 -type f \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" \) -print
+          find . -name "build.gradle" -type f -exec sed -i '/android {/a\
+              compileOptions {\
+                  sourceCompatibility JavaVersion.VERSION_17\
+                  targetCompatibility JavaVersion.VERSION_17\
+              }\
+              kotlinOptions {\
+                  jvmTarget = "17"\
+              }' {} \;
 
-      - name: Fix JVM target
+      - name: Build APK
         working-directory: project
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          files = list(Path(".").rglob("build.gradle")) + list(Path(".").rglob("build.gradle.kts"))
-
-          if not files:
-              print("ERROR: No Gradle build files found")
-              raise SystemExit(1)
-
-          print("Gradle files found:")
-          for f in files:
-              print(" -", f)
-
-          for p in files:
-              s = p.read_text()
-
-              # Java 17
-              if "compileOptions" not in s and "com.android.application" in s:
-                  if p.suffix == ".kts":
-                      s += """
-
-          android {
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-          }
-          """
-                  else:
-                      s += """
-
-          android {
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-          """
-
-              # Kotlin JVM 17
-              if "kotlinOptions" not in s and "com.android.application" in s:
-                  if p.suffix == ".kts":
-                      s += """
-
-          android {
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-          }
-          """
-                  else:
-                      s += """
-
-          android {
-              kotlinOptions {
-                  jvmTarget = '17'
-              }
-          }
-          """
-
-              p.write_text(s)
-
-          print("JVM target configuration completed.")
-          PY
-
-      - name: Find Gradle wrapper or use Gradle
-        working-directory: project
-        run: |
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-            ./gradlew assembleDebug
-          else
-            gradle assembleDebug
-          fi
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
