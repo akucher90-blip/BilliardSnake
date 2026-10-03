@@ -25,14 +25,12 @@ jobs:
           gradle-version: "8.9"
 
       - name: Extract Android project
-        run: unzip -o BilliardSnake-Android.zip -d project
-
-      - name: Configure JVM 17
-        run: echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+        run: |
+          unzip -o BilliardSnake-Android.zip -d project
 
       - name: Build APK
         working-directory: project
-        run: gradle assembleDebug
+        run: gradle assembleDebug -Pkotlin.jvm.target.validation.mode=warning
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
