@@ -1,42 +1,47 @@
 name: Build APK
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: JDK
+
+      - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-      - name: Gradle
+
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-            - name: Extract
+
+      - name: Extract ZIP
         run: |
           rm -rf project
           mkdir project
           unzip -o BilliardSnake-Android.zip -d project
           echo "=== SEARCHING FOR GRADLE PROJECT ==="
-          find project -name settings.gradle -o -name settings.gradle.kts
+          find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print
 
-      - name: Build
+      - name: Build APK
         run: |
           GRADLE_DIR=$(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit | xargs dirname)
           echo "Gradle project: $GRADLE_DIR"
           cd "$GRADLE_DIR"
           gradle assembleDebug -Pkotlin.jvm.target.validation.mode=warning
-        working-directory: project
-        run: gradle assembleDebug -Pkotlin.jvm.target.validation.mode=warning
-      - name: Upload
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: BilliardSnake-APK
-          path: project/app/build/outputs/apk/debug/app-debug.apk
+          path: project/**/app/build/outputs/apk/debug/app-debug.apk
