@@ -25,19 +25,10 @@ jobs:
           gradle-version: "8.9"
 
       - name: Extract Android project
-        run: |
-          rm -rf project
-          mkdir project
-          unzip -o BilliardSnake-Android.zip -d project
+        run: unzip -o BilliardSnake-Android.zip -d project
 
-      - name: Fix JVM targets
-        working-directory: project
-        run: |
-          find . -type f \( -name "*.gradle" -o -name "*.gradle.kts" \) -print0 | xargs -0 sed -i \
-            -e 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' \
-            -e 's/JavaVersion.VERSION_8/JavaVersion.VERSION_17/g' \
-            -e "s/jvmTarget *= *['\"]1.8['\"]/jvmTarget = '17'/g" \
-            -e "s/jvmTarget *= *['\"]8['\"]/jvmTarget = '17'/g'
+      - name: Configure JVM 17
+        run: echo "JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
 
       - name: Build APK
         working-directory: project
@@ -47,5 +38,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BilliardSnake-APK
-          path: project/**/build/outputs/apk/debug/*.apk
+          path: project/app/build/outputs/apk/debug/app-debug.apk
 ```
