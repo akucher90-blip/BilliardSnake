@@ -1,39 +1,31 @@
 name: Build APK
-
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
-
+    branches:
+      - main
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up JDK 17
+      - name: JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Set up Gradle
+      - name: Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-
-      - name: Extract Android project
+      - name: Extract
         run: unzip -o BilliardSnake-Android.zip -d project
-
-      - name: Build APK
+      - name: Build
         working-directory: project
         run: gradle assembleDebug -Pkotlin.jvm.target.validation.mode=warning
-
-      - name: Upload APK
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: BilliardSnake-APK
           path: project/app/build/outputs/apk/debug/app-debug.apk
-```
