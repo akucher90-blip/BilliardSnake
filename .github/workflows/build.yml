@@ -19,9 +19,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Extract
-        run: unzip -o BilliardSnake-Android.zip -d project
+            - name: Extract
+        run: |
+          rm -rf project
+          mkdir project
+          unzip -o BilliardSnake-Android.zip -d project
+          echo "=== SEARCHING FOR GRADLE PROJECT ==="
+          find project -name settings.gradle -o -name settings.gradle.kts
+
       - name: Build
+        run: |
+          GRADLE_DIR=$(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit | xargs dirname)
+          echo "Gradle project: $GRADLE_DIR"
+          cd "$GRADLE_DIR"
+          gradle assembleDebug -Pkotlin.jvm.target.validation.mode=warning
         working-directory: project
         run: gradle assembleDebug -Pkotlin.jvm.target.validation.mode=warning
       - name: Upload
